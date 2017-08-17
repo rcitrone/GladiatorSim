@@ -59,6 +59,34 @@ fight <- function(home, away, df, rand.mean = 500, rand.sd = 200){
   return(c("winner" = winner, "loser" = loser))
 }
 
+### Season Battle
+seasonSim <- function(df, battle.log = battle.log, matchlevel = 1, seasonnum = 1){
+  p <- nrow(df)
+  df$preserveID <- df$playerID
+  df$playerID <- c(1:p)
+  for(jj in 1:(p-1)){
+    for(kk in (jj+1):p){
+      home.playerID <- df$preserveID[df$playerID == jj]
+      away.playerID <- df$preserveID[df$playerID == kk]
+      result <- fight(home.playerID, away.playerID, df)
+      result.frame <- data.frame("weeknum" = jj, "winnerID" = result[1], "loserID" = result[2], "matchlevel" = matchlevel, "seasonnum"= seasonnum)
+      battle.log <- rbind(battle.log, result.frame)
+    }
+  }
+  return(battle.log)
+}
+
+battle.log <- data.frame("weeknum" = 1, "winnerID" = 1, "loserID" = 1, "matchlevel" = 1, "seasonnum" = 1)
+randyoung <- subset(rand100, rand100$age < 45 & rand100$age > 17)
+randyoung$playerID <- c(1:nrow(randyoung))
+test <- subset(randyoung, playerID <= 30)
+
+get <- seasonSim(test, battle.log)
+get$sumcol <- 1
+work <- get %>%
+  group_by(winnerID) %>%
+  summarize(wins = sum(sumcol[winnerID == winnerID]),
+            losses = sum(sumcol[loserID == winnerID]))
 
 
 ### Studying Player Generation
