@@ -152,4 +152,7 @@ kingstourney <- function(df, battle.log = battle.log, seasonnum = 1, region = 1)
   return(battle.log)
 }
 
+league.seeding <- c(rep("S", 30), rep(c("A1", "A2"), 30), rep(c("B1", "B2"), 30), rep(c("J1", "J2"), 30))
+
+
 
