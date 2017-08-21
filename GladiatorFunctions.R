@@ -59,6 +59,8 @@ fight <- function(home, away, df, rand.mean = 500, rand.sd = 200){
   adf <- subset(df, playerID == away)
   hdf2 <- as.vector(hdf[,c("skill", "strength", "wit", "speed")])
   adf2 <- as.vector(adf[,c("skill", "strength", "wit", "speed")])
+  hdf2 <- hdf2[1,]
+  adf2 <- adf2[1,]
   diff.scores <- hdf2/adf2
   rand.vals <- rnorm(4, mean= rand.mean, sd = rand.sd)
   total.scores <- as.integer(diff.scores * rand.vals)
@@ -130,13 +132,13 @@ tourney16 <- function(df, battle.log = battle.log, seasonnum = 1, region = 1){
 
 #### Kings Tourney
 ktseed <- read.csv("ktseed.csv")
-kingstourney <- function(df, battel.log = battle.log, seasonnum = 1, region = 1){
+kingstourney <- function(df, battle.log = battle.log, seasonnum = 1, region = 1){
   df <- df[order(df$ELO, decreasing = TRUE),]
   df$ovseed <- c(1:nrow(df))
-  df <- subset(df, ovseed <= 64)
-  df <- left_join(df, ktseed, by = "seed")
+  df.short <- subset(df, ovseed <= 64)
+  df.short <- left_join(df.short, ktseed, by = "ovseed")
   for(ll in 1:4){
-    df.limit <- subset(df, group == 1)
+    df.limit <- subset(df.short, group == ll)
     battle.log <- tourney16(df.limit, battle.log = battle.log, seasonnum = seasonnum, region = region)
   }
   finalfour <- battle.log$winnerID[battle.log$matchlevel == "Round 4" & seasonnum == seasonnum]
