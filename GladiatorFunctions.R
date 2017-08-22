@@ -210,3 +210,4 @@ runHistory <- function(df, battle.log, df.history, startyear=51, yearstorun=10, 
   output <- c(df, battle.log, df.history)
   return(output)
 }
+
