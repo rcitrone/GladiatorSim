@@ -154,7 +154,7 @@ kingstourney <- function(df, battle.log = battle.log, seasonnum){
 }
 
 league.seeding <- c(rep("S", 25), rep(c("A1", "A2"), 25), rep(c("B1", "B2"), 25), rep(c("J1", "J2"), 25))
-
+leaguelist <- unique(league.seeding)
 
 runHistory <- function(df, battle.log, df.history, startyear=51, yearstorun=10, nextid=176){
   #age fighters
