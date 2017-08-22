@@ -97,7 +97,7 @@ seasonSim <- function(df, battle.log = battle.log, matchlevel = 1, seasonnum = 1
 
 ### 16-person Tournament
 seeding <- read.csv('seeding.csv')
-tourney16 <- function(df, battle.log = battle.log, seasonnum = 1, region = 1){
+tourney16 <- function(df, battle.log = battle.log, seasonnum){
   winners <- c(1:15)
   for(pp in 1:nrow(seeding)){
     hp <- match(seeding$home[pp], df$seed)
@@ -132,16 +132,17 @@ tourney16 <- function(df, battle.log = battle.log, seasonnum = 1, region = 1){
 
 #### Kings Tourney
 ktseed <- read.csv("ktseed.csv")
-kingstourney <- function(df, battle.log = battle.log, seasonnum = 1, region = 1){
+kingstourney <- function(df, battle.log = battle.log, seasonnum){
   df <- df[order(df$ELO, decreasing = TRUE),]
   df$ovseed <- c(1:nrow(df))
   df.short <- subset(df, ovseed <= 64)
   df.short <- left_join(df.short, ktseed, by = "ovseed")
   for(ll in 1:4){
     df.limit <- subset(df.short, group == ll)
-    battle.log <- tourney16(df.limit, battle.log = battle.log, seasonnum = seasonnum, region = region)
+    battle.log <- tourney16(df.limit, battle.log = battle.log, seasonnum = seasonnum)
   }
-  finalfour <- battle.log$winnerID[battle.log$matchlevel == "Round 4" & seasonnum == seasonnum]
+  finalfour <- battle.log$winnerID[battle.log$matchlevel == "Round 4" & battle.log$seasonnum == seasonnum]
+  print(finalfour)
   finalist1 <- fight(finalfour[1], finalfour[2], df)
   finalist2 <- fight(finalfour[3], finalfour[4], df)
   result.frame1 <- data.frame("weeknum" = 5, "winnerID" = finalist1[1], "loserID" = finalist1[2], 'matchlevel' = "Semifinal", seasonnum = seasonnum)
@@ -152,7 +153,60 @@ kingstourney <- function(df, battle.log = battle.log, seasonnum = 1, region = 1)
   return(battle.log)
 }
 
-league.seeding <- c(rep("S", 30), rep(c("A1", "A2"), 30), rep(c("B1", "B2"), 30), rep(c("J1", "J2"), 30))
+league.seeding <- c(rep("S", 25), rep(c("A1", "A2"), 25), rep(c("B1", "B2"), 25), rep(c("J1", "J2"), 25))
 
 
-
+runHistory <- function(df, battle.log, df.history, startyear=51, yearstorun=10, nextid=176){
+  #age fighters
+  current.id = nextid
+  for(jj in startyear:(startyear+yearstorun)){
+    # age fighters
+    df <- ageFighter(df, newyear = jj)
+    # Run Season
+    for(qq in leaguelist){
+      df.subset <- subset(df, league == qq)
+      battle.log <- seasonSim(df.subset, battle.log = battle.log, matchlevel = qq, seasonnum = jj)
+    }
+    
+    ## Calculting ELO
+    if(nrow(battle.log) > 5000){
+      startindex <- nrow(battle.log) - 5000 - 1
+      bl <- battle.log[startindex:nrow(battle.log),]
+    } else { bl <- battle.log }
+    bl$order <- c(1:nrow(bl))
+    elo.date <- as.Date("2017-01-01") + bl$order
+    winners <- bl$winnerID
+    losers <- bl$loserID
+    elo.calc <- elo.seq(winner = winners, loser = losers, Date = elo.date, init = "bottom", k = 40, runcheck = FALSE)
+    eg <- elo.calc$cmat
+    eglim <- as.data.frame(eg[nrow(eg),])
+    eglim$winnerID <- rownames(eglim)
+    eglim$winnerID <- as.numeric(eglim$winnerID)
+    colnames(eglim) <- c("ELO", "playerID")
+    drop <- c("ELO")
+    df <- df[,!(names(df) %in% drop)]
+    df <- left_join(df, eglim, by = "playerID")
+    
+    #Kings tourney
+    battle.log <- kingstourney(df, battle.log = battle.log, seasonnum = jj)
+    df <- df[order(df$ELO, decreasing = TRUE),]
+    df.history <- rbind(df.history, df)
+    df$league <- league.seeding
+    df <- subset(df, (age <= 20 | !(league %in% c("J1", "J2"))) & ELO > 550)
+    numnew <- 175-nrow(df)
+    if(numnew > 0){
+      new.recruits <- genFighter(startID = current.id, n=numnew, year= jj-15)
+      current.id <- current.id + numnew
+      new.recruits <- ageFighter(new.recruits, newyear = jj)
+      num.j1 <- 25 - nrow(subset(df, league == "J1"))
+      new.league <- c(rep("J1", num.j1), rep("J2", numnew - num.j1))
+      new.recruits$rand <- runif(nrow(new.recruits), min = 0, max = 1)
+      new.recruits$league <- new.league
+      new.recruits$ELO <- 700
+      df <- rbind(df, new.recruits)
+    }
+    print(jj)
+  }
+  output <- c(df, battle.log, df.history)
+  return(output)
+}
